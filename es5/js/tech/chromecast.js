@@ -54,8 +54,12 @@ var Chromecast = (function (_Tech) {
         this.apiSession.addUpdateListener(sessionUpdateHanlder);
 
         this.on('dispose', function () {
-            _this.apiMedia.removeUpdateListener(mediaStatusUpdateHandler);
-            _this.apiSession.removeUpdateListener(sessionUpdateHanlder);
+            if (_this.apiMedia) {
+                _this.apiMedia.removeUpdateListener(mediaStatusUpdateHandler);
+            }
+            if (_this.apiSession) {
+                _this.apiSession.removeUpdateListener(sessionUpdateHanlder);
+            }
             _this.onMediaStatusUpdate();
             _this.onSessionUpdate(false);
         });
@@ -377,6 +381,12 @@ var Chromecast = (function (_Tech) {
             this.resetSrc_(Function.prototype);
             _get(Object.getPrototypeOf(Chromecast.prototype), 'dispose', this).call(this, this);
         }
+    }, {
+        key: 'setAutoplay',
+        value: function setAutoplay() {}
+    }, {
+        key: 'seeking',
+        value: function seeking() {}
     }]);
 
     return Chromecast;

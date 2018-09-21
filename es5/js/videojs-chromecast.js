@@ -55,7 +55,7 @@ Chromecast.prototype.options_ = {};
 _videoJs2['default'].options.children.push('chromecast');
 
 _videoJs2['default'].addLanguage('en', {
-    'CASTING TO': 'WIEDERGABE AUF'
+    'CASTING TO': 'CASTING TO'
 });
 
 _videoJs2['default'].addLanguage('de', {

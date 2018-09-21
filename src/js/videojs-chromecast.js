@@ -29,7 +29,7 @@ videojs.options.children.push('chromecast');
 
 
 videojs.addLanguage('en', {
-    'CASTING TO': 'WIEDERGABE AUF'
+    'CASTING TO': 'CASTING TO'
 });
 
 videojs.addLanguage('de', {

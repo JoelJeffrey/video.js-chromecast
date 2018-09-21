@@ -21,8 +21,9 @@ class ChromeCastButton extends Button {
     constructor (player, options) {
         super(player, options);
         this.hide();
-        this.initializeApi();
+        this.userStop = false;
         options.appId = player.options_.chromecast.appId;
+        this.initializeApi(options.appId);
         player.chromecast = this;
 
         this.on(player, 'loadstart', () => {
@@ -44,9 +45,8 @@ class ChromeCastButton extends Button {
      * @method initializeApi
      */
 
-    initializeApi () {
+    initializeApi (appId) {
         let apiConfig;
-        let appId;
         let sessionRequest;
 
         let user_agent = window.navigator && window.navigator.userAgent || ''
@@ -65,7 +65,6 @@ class ChromeCastButton extends Button {
         }
 
         videojs.log('Cast APIs are available');
-        appId = this.options_.appId || chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID;
         sessionRequest = new chrome.cast.SessionRequest(appId);
         apiConfig = new chrome.cast.ApiConfig(sessionRequest, ::this.sessionJoinedListener, ::this.receiverListener);
         return chrome.cast.initialize(apiConfig, ::this.onInitSuccess, ::this.castError);
@@ -77,6 +76,7 @@ class ChromeCastButton extends Button {
             code: castError.code,
             message: castError.description
         };
+        this.player_.trigger('casterror');
 
         switch (castError.code) {
             case chrome.cast.ErrorCode.API_NOT_INITIALIZED:
@@ -152,13 +152,13 @@ class ChromeCastButton extends Button {
 
         mediaInfo = new chrome.cast.media.MediaInfo(source, type);
         mediaInfo.metadata = new chrome.cast.media.GenericMediaMetadata();
-        if (this.options_.playerOptions.chromecast.metadata) {
-            ref = this.options_.playerOptions.chromecast.metadata;
+        if (this.player_.options_.chromecast.metadata) {
+            ref = this.player_.options_.chromecast.metadata;
             for (key in ref) {
                 value = ref[key];
                 mediaInfo.metadata[key] = value;
             }
-
+            mediaInfo.metadata['command'] = 'set_metadata';
         }
         //Add poster image on player
         const poster = this.player().poster();
@@ -224,8 +224,13 @@ class ChromeCastButton extends Button {
 
         loadRequest.autoplay = true;
         loadRequest.currentTime = this.player_.currentTime();
+        loadRequest.media.currentTime = this.player_.currentTime();
+        this.loadRequest = loadRequest;
 
-        this.apiSession.loadMedia(loadRequest, ::this.onMediaDiscovered, ::this.castError);
+        this.apiSession.sendMessage(this.options_.playerOptions.chromecast.messageProtocol, mediaInfo.metadata, ::this.onLoadMedia);
+    }
+     onLoadMedia() {
+        this.apiSession.loadMedia(this.loadRequest, ::this.onMediaDiscovered, ::this.castError);
         this.apiSession.addUpdateListener(::this.onSessionUpdate);
     }
 
@@ -238,6 +243,7 @@ class ChromeCastButton extends Button {
 
         this.casting = true;
         this.inactivityTimeout = this.player_.options_.inactivityTimeout;
+        this.player_.trigger('castbegin');
         this.player_.options_.inactivityTimeout = 0;
         this.player_.userActive(true);
         this.addClass('connected');
@@ -245,7 +251,7 @@ class ChromeCastButton extends Button {
     }
 
     onSessionUpdate (isAlive) {
-        if (!this.player_.apiMedia) {
+        if (this.userStop) {
             return;
         }
         if (!isAlive) {
@@ -254,6 +260,7 @@ class ChromeCastButton extends Button {
     }
 
     stopCasting () {
+        this.userStop = true;
         return this.apiSession.stop(::this.onStopAppSuccess, ::this.castError);
     }
 
@@ -261,13 +268,7 @@ class ChromeCastButton extends Button {
         this.casting = false;
         let time = this.player_.currentTime();
         this.removeClass('connected');
-        this.player_.src(this.player_.options_['sources']);
-        if (!this.player_.paused()) {
-            this.player_.one('seeked', function () {
-                return this.player_.play();
-            });
-        }
-        this.player_.currentTime(time);
+        this.player_.trigger('castend');
         this.player_.options_.inactivityTimeout = this.inactivityTimeout;
         return this.apiSession = null;
     }
@@ -288,6 +289,7 @@ class ChromeCastButton extends Button {
      */
     handleClick () {
         super.handleClick();
+        this.userStop = false;
         if (this.casting) {
             return this.stopCasting();
         } else {

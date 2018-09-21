@@ -102,6 +102,7 @@ var ChromeCastButton = (function (_Button) {
                 code: _castError.code,
                 message: _castError.description
             };
+            this.player_.trigger('casterror');
 
             switch (_castError.code) {
                 case chrome.cast.ErrorCode.API_NOT_INITIALIZED:
@@ -267,6 +268,7 @@ var ChromeCastButton = (function (_Button) {
 
             this.casting = true;
             this.inactivityTimeout = this.player_.options_.inactivityTimeout;
+            this.player_.trigger('castbegin');
             this.player_.options_.inactivityTimeout = 0;
             this.player_.userActive(true);
             this.addClass('connected');
@@ -299,6 +301,7 @@ var ChromeCastButton = (function (_Button) {
                     return this.player_.play();
                 });
             }
+            this.player_.trigger('castend');
             this.player_.currentTime(time);
             this.player_.options_.inactivityTimeout = this.inactivityTimeout;
             return this.apiSession = null;
